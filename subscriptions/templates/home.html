@@ -8,6 +8,21 @@
       <script defer src="https://use.fontawesome.com/releases/v5.3.1/js/all.js"></script>
    </head>
    <body>
+     <section class="section">
+         <div class="container">
+             {% if user.is_authenticated %}
+                 <p>You're logged in as {{ user.username }}</p>
+                 <a href="{% url "customer-logout" %}">
+                    Log out
+                 </a>
+             {% else %}
+                 <p>You're not logged in.</p>
+                  <a href="{% url "customer-login" %}">
+                    Log in
+                 </a>
+             {% endif %}
+         </div>
+      </section>
       <section class="section">
          <div class="container">
             <button class="button is-primary" id="submitBtn">Subscribe!</button>
