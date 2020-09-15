@@ -116,6 +116,13 @@ USE_L10N = True
 USE_TZ = True
 
 
+# Stripe configuration
+
+STRIPE_PUBLISHABLE_KEY = '<your test publishable key here>'
+STRIPE_SECRET_KEY = '<your test secret key here>'
+STRIPE_ENDPOINT_SECRET = '<your endpoint secret here>'
+
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.1/howto/static-files/
 
