@@ -6,10 +6,19 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import TemplateView
 
 from djangostripesubs import settings
+from djangostripesubs.settings import STRIPE_PRODUCT_ID
 
 
 class HomePageView(TemplateView):
     template_name = 'home.html'
+
+
+class SuccessView(TemplateView):
+    template_name = 'success.html'
+
+
+class CancelView(TemplateView):
+    template_name = 'cancel.html'
 
 
 @csrf_exempt
@@ -35,17 +44,14 @@ def create_checkout_session(request):
 
             # ?session_id={CHECKOUT_SESSION_ID} means the redirect will have the session ID set as a query param
             checkout_session = stripe.checkout.Session.create(
-                client_reference_id=request.user.id if request.user.is_authenticated else None,
                 success_url=domain_url + 'success?session_id={CHECKOUT_SESSION_ID}',
                 cancel_url=domain_url + 'cancelled/',
                 payment_method_types=['card'],
                 mode='subscription',
                 line_items=[
                     {
-                        'name': 'T-shirt',
+                        'price': STRIPE_PRODUCT_ID,
                         'quantity': 1,
-                        'currency': 'usd',
-                        'amount': '2000',
                     }
                 ]
             )
