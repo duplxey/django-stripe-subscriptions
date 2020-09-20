@@ -1,24 +1,44 @@
+from pprint import pprint
+
 import stripe
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.http import HttpResponse, JsonResponse
+from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
-from django.views.generic import TemplateView
 
 from djangostripesubs import settings
 from djangostripesubs.settings import STRIPE_PRODUCT_ID
 from subscriptions.models import StripeCustomer
 
-
-class HomePageView(TemplateView):
-    template_name = 'home.html'
-
-
-class SuccessView(TemplateView):
-    template_name = 'success.html'
+# Set Stripe's API key
+stripe.api_key = settings.STRIPE_SECRET_KEY
 
 
-class CancelView(TemplateView):
-    template_name = 'cancel.html'
+@login_required
+def home_view(request):
+    try:
+        stripe_customer = StripeCustomer.objects.get(user=request.user)
+        subscription = stripe.Subscription.retrieve(stripe_customer.stripeSubscriptionId)
+        product = stripe.Product.retrieve(subscription.plan.product)
+
+        return render(request, "home.html", {
+            'subscription': subscription,
+            'product': product,
+        })
+
+    except StripeCustomer.DoesNotExist:
+        return render(request, "home.html", {})
+
+
+@login_required
+def success_view(request):
+    return render(request, "success.html", {})
+
+
+@login_required
+def cancel_view(request):
+    return render(request, "cancel.html", {})
 
 
 @csrf_exempt
@@ -32,7 +52,6 @@ def stripe_config(request):
 def create_checkout_session(request):
     if request.method == 'GET':
         domain_url = 'http://localhost:8000/'
-        stripe.api_key = settings.STRIPE_SECRET_KEY
         try:
             # Create new Checkout Session for the order
             # Other optional params include:
@@ -63,7 +82,6 @@ def create_checkout_session(request):
 
 @csrf_exempt
 def stripe_webhook(request):
-    stripe.api_key = settings.STRIPE_SECRET_KEY
     endpoint_secret = settings.STRIPE_ENDPOINT_SECRET
     payload = request.body
     sig_header = request.META['HTTP_STRIPE_SIGNATURE']
@@ -86,59 +104,13 @@ def stripe_webhook(request):
 
         client_reference_id = session.get('client_reference_id')
         stripe_customer_id = session.get('customer')
+        stripe_subscription_id = session.get('subscription')
 
         user = User.objects.get(id=client_reference_id)
-        StripeCustomer.objects.create(user=user, stripeCustomerId=stripe_customer_id)
-
-        # Our StripeUser is not authenticated with our authentication User
-
-        print("session")
-        print(vars(session))
-
-        # you can fetch customer, subscription, payment method from the session object
-        # example data:
-        # {
-        #     '_unsaved_values': set(),
-        #     '_transient_values': set(),
-        #     '_last_response': None,
-        #     '_retrieve_params': {},
-        #     '_previous': OrderedDict([
-        #         ('id',
-        #          'cs_test_qXrHUwPkf1Gjjx7IzCOMlbZj015KkgcJGF5FAMnUORCF1owjxjHvUFQY'
-        #          ),
-        #         ('object', 'checkout.session'),
-        #         ('allow_promotion_codes', None),
-        #         ('amount_subtotal', 500),
-        #         ('amount_total', 500),
-        #         ('billing_address_collection', None),
-        #         ('cancel_url', 'http://localhost:8000/cancelled/'),
-        #         ('client_reference_id', None),
-        #         ('currency', 'eur'),
-        #         ('customer', 'cus_I3MbTLnHXTKFDP'),
-        #         ('customer_email', None),
-        #         ('livemode', False),
-        #         ('locale', None),
-        #         ('metadata', OrderedDict()),
-        #         ('mode', 'subscription'),
-        #         ('payment_intent', None),
-        #         ('payment_method_types', ['card']),
-        #         ('payment_status', 'paid'),
-        #         ('setup_intent', None),
-        #         ('shipping', None),
-        #         ('shipping_address_collection', None),
-        #         ('submit_type', None),
-        #         ('subscription', 'sub_I3MbYgV7COHt1z'),
-        #         ('success_url',
-        #          'http://localhost:8000/success?session_id={CHECKOUT_SESSION_ID}'
-        #          ),
-        #         ('total_details', OrderedDict([('amount_discount', 0),
-        #                                        ('amount_tax', 0)])),
-        #     ]),
-        #     'api_key': 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-        #     'stripe_version': None,
-        #     'stripe_account': None,
-        # }
-
-        # TODO: make changes to our models
+        StripeCustomer.objects.create(
+            user=user,
+            stripeCustomerId=stripe_customer_id,
+            stripeSubscriptionId=stripe_subscription_id,
+        )
 
     return HttpResponse(status=200)
