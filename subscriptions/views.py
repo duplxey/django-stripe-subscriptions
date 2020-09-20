@@ -1,5 +1,3 @@
-import json
-
 import stripe
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -62,54 +60,74 @@ def create_checkout_session(request):
 
 @csrf_exempt
 def stripe_webhook(request):
-    # You can use webhooks to receive information about asynchronous payment events.
-    # For more about our webhook events check out https://stripe.com/docs/webhooks.
-    webhook_secret = settings.STRIPE_ENDPOINT_SECRET
-    request_data = json.loads(request.data)
+    stripe.api_key = settings.STRIPE_SECRET_KEY
+    endpoint_secret = settings.STRIPE_ENDPOINT_SECRET
+    payload = request.body
+    sig_header = request.META['HTTP_STRIPE_SIGNATURE']
+    event = None
 
-    if webhook_secret:
-        # Retrieve the event by verifying the signature using the raw body and secret if webhook signing is configured.
-        signature = request.headers.get('stripe-signature')
-        try:
-            event = stripe.Webhook.construct_event(
-                payload=request.data, sig_header=signature, secret=webhook_secret)
-            data = event['data']
-        except Exception as e:
-            return e
-        # Get the type of webhook event sent - used to check the status of PaymentIntents.
-        event_type = event['type']
-    else:
-        data = request_data['data']
-        event_type = request_data['type']
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, endpoint_secret
+        )
+    except ValueError as e:
+        # Invalid payload
+        return HttpResponse(status=400)
+    except stripe.error.SignatureVerificationError as e:
+        # Invalid signature
+        return HttpResponse(status=400)
 
-    data_object = data['object']
+    # Handle the checkout.session.completed event
+    if event['type'] == 'checkout.session.completed':
+        session = event['data']['object']
 
-    if event_type == 'invoice.paid':
-        # Used to provision services after the trial has ended.
-        # The status of the invoice will show up as paid. Store the status in your
-        # database to reference when a user accesses your service to avoid hitting rate
-        # limits.
-        print(data)
+        print("session")
+        print(vars(session))
 
-    if event_type == 'invoice.payment_failed':
-        # If the payment fails or the customer does not have a valid payment method,
-        # an invoice.payment_failed event is sent, the subscription becomes past_due.
-        # Use this webhook to notify your user that their payment has
-        # failed and to retrieve new card details.
-        print(data)
+        # you can fetch customer, subscription, payment method from the session object
+        # example data:
+        # {
+        #     '_unsaved_values': set(),
+        #     '_transient_values': set(),
+        #     '_last_response': None,
+        #     '_retrieve_params': {},
+        #     '_previous': OrderedDict([
+        #         ('id',
+        #          'cs_test_qXrHUwPkf1Gjjx7IzCOMlbZj015KkgcJGF5FAMnUORCF1owjxjHvUFQY'
+        #          ),
+        #         ('object', 'checkout.session'),
+        #         ('allow_promotion_codes', None),
+        #         ('amount_subtotal', 500),
+        #         ('amount_total', 500),
+        #         ('billing_address_collection', None),
+        #         ('cancel_url', 'http://localhost:8000/cancelled/'),
+        #         ('client_reference_id', None),
+        #         ('currency', 'eur'),
+        #         ('customer', 'cus_I3MbTLnHXTKFDP'),
+        #         ('customer_email', None),
+        #         ('livemode', False),
+        #         ('locale', None),
+        #         ('metadata', OrderedDict()),
+        #         ('mode', 'subscription'),
+        #         ('payment_intent', None),
+        #         ('payment_method_types', ['card']),
+        #         ('payment_status', 'paid'),
+        #         ('setup_intent', None),
+        #         ('shipping', None),
+        #         ('shipping_address_collection', None),
+        #         ('submit_type', None),
+        #         ('subscription', 'sub_I3MbYgV7COHt1z'),
+        #         ('success_url',
+        #          'http://localhost:8000/success?session_id={CHECKOUT_SESSION_ID}'
+        #          ),
+        #         ('total_details', OrderedDict([('amount_discount', 0),
+        #                                        ('amount_tax', 0)])),
+        #     ]),
+        #     'api_key': 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+        #     'stripe_version': None,
+        #     'stripe_account': None,
+        # }
 
-    if event_type == 'invoice.finalized':
-        # If you want to manually send out invoices to your customers
-        # or store them locally to reference to avoid hitting Stripe rate limits.
-        print(data)
-
-    if event_type == 'customer.subscription.deleted':
-        # handle subscription cancelled automatically based
-        # upon your subscription settings. Or if the user cancels it.
-        print(data)
-
-    if event_type == 'customer.subscription.trial_will_end':
-        # Send notification to your user that the trial will end
-        print(data)
+        # TODO: make changes to our models
 
     return HttpResponse(status=200)
