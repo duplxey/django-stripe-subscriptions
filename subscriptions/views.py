@@ -1,10 +1,12 @@
 import stripe
+from django.contrib.auth.models import User
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import TemplateView
 
 from djangostripesubs import settings
 from djangostripesubs.settings import STRIPE_PRODUCT_ID
+from subscriptions.models import StripeCustomer
 
 
 class HomePageView(TemplateView):
@@ -42,6 +44,7 @@ def create_checkout_session(request):
 
             # ?session_id={CHECKOUT_SESSION_ID} means the redirect will have the session ID set as a query param
             checkout_session = stripe.checkout.Session.create(
+                client_reference_id=request.user.id if request.user.is_authenticated else None,
                 success_url=domain_url + 'success?session_id={CHECKOUT_SESSION_ID}',
                 cancel_url=domain_url + 'cancelled/',
                 payment_method_types=['card'],
@@ -80,6 +83,14 @@ def stripe_webhook(request):
     # Handle the checkout.session.completed event
     if event['type'] == 'checkout.session.completed':
         session = event['data']['object']
+
+        client_reference_id = session.get('client_reference_id')
+        stripe_customer_id = session.get('customer')
+
+        user = User.objects.get(id=client_reference_id)
+        StripeCustomer.objects.create(user=user, stripeCustomerId=stripe_customer_id)
+
+        # Our StripeUser is not authenticated with our authentication User
 
         print("session")
         print(vars(session))
