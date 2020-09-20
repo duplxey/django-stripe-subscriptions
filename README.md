@@ -11,5 +11,6 @@
     STRIPE_PRODUCT_ID = '<your product api id (from product created in the first step)>'
     ```
 1. Install the packages in requirements.txt (`pip install -r requirements.txt`).
-1. Run the server! (`python manage.py runserver`)
+1. Run the migrations (`python manage.py migrate`).
+1. Run the server (`python manage.py runserver`)!
 1. Register your webhook on Stripe Dashboard or forward events using Stripe CLI.

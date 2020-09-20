@@ -1,5 +1,3 @@
-from pprint import pprint
-
 import stripe
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
@@ -18,9 +16,14 @@ stripe.api_key = settings.STRIPE_SECRET_KEY
 @login_required
 def home_view(request):
     try:
+        # Retrieve the subscription & product
         stripe_customer = StripeCustomer.objects.get(user=request.user)
         subscription = stripe.Subscription.retrieve(stripe_customer.stripeSubscriptionId)
         product = stripe.Product.retrieve(subscription.plan.product)
+
+        # Feel free to fetch any additional data from 'subscription' or 'product'
+        # https://stripe.com/docs/api/subscriptions/object
+        # https://stripe.com/docs/api/products/object
 
         return render(request, "home.html", {
             'subscription': subscription,
@@ -28,17 +31,17 @@ def home_view(request):
         })
 
     except StripeCustomer.DoesNotExist:
-        return render(request, "home.html", {})
+        return render(request, "home.html")
 
 
 @login_required
 def success_view(request):
-    return render(request, "success.html", {})
+    return render(request, "success.html")
 
 
 @login_required
 def cancel_view(request):
-    return render(request, "cancel.html", {})
+    return render(request, "cancel.html")
 
 
 @csrf_exempt
@@ -63,9 +66,10 @@ def create_checkout_session(request):
 
             # ?session_id={CHECKOUT_SESSION_ID} means the redirect will have the session ID set as a query param
             checkout_session = stripe.checkout.Session.create(
+                # client_reference_id = request.user.id
                 client_reference_id=request.user.id if request.user.is_authenticated else None,
                 success_url=domain_url + 'success?session_id={CHECKOUT_SESSION_ID}',
-                cancel_url=domain_url + 'cancelled/',
+                cancel_url=domain_url + 'cancel/',
                 payment_method_types=['card'],
                 mode='subscription',
                 line_items=[
@@ -102,10 +106,12 @@ def stripe_webhook(request):
     if event['type'] == 'checkout.session.completed':
         session = event['data']['object']
 
+        # Fetch all the required data from session
         client_reference_id = session.get('client_reference_id')
         stripe_customer_id = session.get('customer')
         stripe_subscription_id = session.get('subscription')
 
+        # Get the user and create a new StripeCustomer
         user = User.objects.get(id=client_reference_id)
         StripeCustomer.objects.create(
             user=user,
