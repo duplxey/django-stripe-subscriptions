@@ -6,7 +6,7 @@ from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 
 from djangostripesubs import settings
-from djangostripesubs.settings import STRIPE_PRODUCT_ID
+from djangostripesubs.settings import STRIPE_PRICE_ID
 from subscriptions.models import StripeCustomer
 
 # Set Stripe's API key
@@ -74,7 +74,7 @@ def create_checkout_session(request):
                 mode='subscription',
                 line_items=[
                     {
-                        'price': STRIPE_PRODUCT_ID,
+                        'price': STRIPE_PRICE_ID,
                         'quantity': 1,
                     }
                 ]
@@ -118,5 +118,6 @@ def stripe_webhook(request):
             stripeCustomerId=stripe_customer_id,
             stripeSubscriptionId=stripe_subscription_id,
         )
+        print(user.username + " just subscribed.")
 
     return HttpResponse(status=200)
