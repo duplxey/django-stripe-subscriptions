@@ -1,17 +1,42 @@
-# django-stripe-subscriptions
-- dotenv
+# Setting up Stripe subscriptions with Django
 
-## Setup
-1. Visit Stripe dashboard and create a new product with 'Recurring' payment.
-1. Create a new virtual environment (https://docs.python.org/3/tutorial/venv.html).
-1. Create a new `.env` file (in this directory) containing the following:
+## Want to learn how to build this?
+
+Check out the [post]().
+
+## Want to use this project?
+
+1. Fork/Clone
+
+1. Create and activate a virtual environment:
+
+    ```sh
+    $ python3 -m venv venv && source venv/bin/activate
     ```
-    STRIPE_PUBLISHABLE_KEY = '<your publishable key>'
-    STRIPE_SECRET_KEY = '<your stripe secret key>'
-    STRIPE_ENDPOINT_SECRET = '<your endpoint secret key>'
-    STRIPE_PRODUCT_ID = '<your product api id (from product created in the first step)>'
+
+1. Install the requirements:
+
+    ```sh
+    (venv)$ pip install -r requirements.txt
     ```
-1. Install the packages in requirements.txt (`pip install -r requirements.txt`).
-1. Run the migrations (`python manage.py migrate`).
-1. Run the server (`python manage.py runserver`)!
-1. Register your webhook on Stripe Dashboard or forward events using Stripe CLI.
+
+1. Apply the migrations:
+
+    ```sh
+    (venv)$ python manage.py migrate
+    ```
+
+1. Add your Stripe test secret key, test publishable key, endpoint secret and price API ID to the *settings.py* file:
+
+    ```python
+    STRIPE_PUBLISHABLE_KEY = '<your test publishable key here>'
+    STRIPE_SECRET_KEY = '<your test secret key here>'
+    STRIPE_ENDPOINT_SECRET = '<your endpoint secret here>'
+    STRIPE_PRICE_ID = '<your price api id here>'
+    ```
+
+1. Run the server:
+
+    ```sh
+    (venv)$ python manage.py runserver
+    ```
