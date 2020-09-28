@@ -1,6 +1,7 @@
 # django-stripe-subscriptions
 - dotenv
 - accounts url register file
+- stripe_product_id -> stripe_price_id
 
 ## Setup
 1. Visit Stripe dashboard and create a new product with 'Recurring' payment.
