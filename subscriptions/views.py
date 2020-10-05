@@ -1,23 +1,20 @@
 import stripe
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import User
-from django.http import HttpResponse, JsonResponse
+from django.contrib.auth.models import User  # new
+from django.http.response import JsonResponse, HttpResponse  # updated
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 
-from djangostripesubs import settings
-from djangostripesubs.settings import STRIPE_PRICE_ID
-from subscriptions.models import StripeCustomer
-
-# Set Stripe's API key
-stripe.api_key = settings.STRIPE_SECRET_KEY
+from subscriptions.models import StripeCustomer  # new
 
 
 @login_required
-def home_view(request):
+def home(request):
     try:
         # Retrieve the subscription & product
         stripe_customer = StripeCustomer.objects.get(user=request.user)
+        stripe.api_key = settings.STRIPE_SECRET_KEY
         subscription = stripe.Subscription.retrieve(stripe_customer.stripeSubscriptionId)
         product = stripe.Product.retrieve(subscription.plan.product)
 
@@ -25,23 +22,13 @@ def home_view(request):
         # https://stripe.com/docs/api/subscriptions/object
         # https://stripe.com/docs/api/products/object
 
-        return render(request, "home.html", {
+        return render(request, 'home.html', {
             'subscription': subscription,
             'product': product,
         })
 
     except StripeCustomer.DoesNotExist:
-        return render(request, "home.html")
-
-
-@login_required
-def success_view(request):
-    return render(request, "success.html")
-
-
-@login_required
-def cancel_view(request):
-    return render(request, "cancel.html")
+        return render(request, 'home.html')
 
 
 @csrf_exempt
@@ -55,18 +42,9 @@ def stripe_config(request):
 def create_checkout_session(request):
     if request.method == 'GET':
         domain_url = 'http://localhost:8000/'
+        stripe.api_key = settings.STRIPE_SECRET_KEY
         try:
-            # Create new Checkout Session for the order
-            # Other optional params include:
-            # [billing_address_collection] - to display billing address details on the page
-            # [customer] - if you have an existing Stripe Customer ID
-            # [payment_intent_data] - lets capture the payment later
-            # [customer_email] - lets you prefill the email input in the form
-            # For full details see https:#stripe.com/docs/api/checkout/sessions/create
-
-            # ?session_id={CHECKOUT_SESSION_ID} means the redirect will have the session ID set as a query param
             checkout_session = stripe.checkout.Session.create(
-                # client_reference_id = request.user.id
                 client_reference_id=request.user.id if request.user.is_authenticated else None,
                 success_url=domain_url + 'success?session_id={CHECKOUT_SESSION_ID}',
                 cancel_url=domain_url + 'cancel/',
@@ -74,7 +52,7 @@ def create_checkout_session(request):
                 mode='subscription',
                 line_items=[
                     {
-                        'price': STRIPE_PRICE_ID,
+                        'price': settings.STRIPE_PRICE_ID,
                         'quantity': 1,
                     }
                 ]
@@ -84,8 +62,19 @@ def create_checkout_session(request):
             return JsonResponse({'error': str(e)})
 
 
+@login_required
+def success(request):
+    return render(request, 'success.html')
+
+
+@login_required
+def cancel(request):
+    return render(request, 'cancel.html')
+
+
 @csrf_exempt
 def stripe_webhook(request):
+    stripe.api_key = settings.STRIPE_SECRET_KEY
     endpoint_secret = settings.STRIPE_ENDPOINT_SECRET
     payload = request.body
     sig_header = request.META['HTTP_STRIPE_SIGNATURE']
@@ -118,6 +107,6 @@ def stripe_webhook(request):
             stripeCustomerId=stripe_customer_id,
             stripeSubscriptionId=stripe_subscription_id,
         )
-        print(user.username + " just subscribed.")
+        print(user.username + ' just subscribed.')
 
     return HttpResponse(status=200)

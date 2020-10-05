@@ -2,7 +2,7 @@
 
 ## Want to learn how to build this?
 
-Check out the [post]().
+Check out the [post](https://testdriven.io/blog/django-stripe-subscriptions/).
 
 ## Want to use this project?
 
@@ -31,8 +31,8 @@ Check out the [post]().
     ```python
     STRIPE_PUBLISHABLE_KEY = '<your test publishable key here>'
     STRIPE_SECRET_KEY = '<your test secret key here>'
-    STRIPE_ENDPOINT_SECRET = '<your endpoint secret here>'
     STRIPE_PRICE_ID = '<your price api id here>'
+    STRIPE_ENDPOINT_SECRET = '<your endpoint secret here>'
     ```
 
 1. Run the server:
