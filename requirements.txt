@@ -1,4 +1,4 @@
-Django==3.1.1
-django-allauth==0.42.0
-requests==2.24.0
-stripe==2.53.0
+Django==4.0.6
+django-allauth==0.51.0
+requests==2.28.1
+stripe==3.5.0
